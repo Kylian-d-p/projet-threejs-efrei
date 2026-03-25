@@ -31,6 +31,10 @@ export abstract class TrainElement {
     return this.speed;
   }
 
+  public setSpeed(value: number): void {
+    this.speed = value;
+  }
+
   public getObject(): Group<Object3DEventMap> {
     return this.object;
   }
@@ -40,7 +44,7 @@ export abstract class TrainElement {
   }
 
   protected applyShake(timeElapsedSinceLastFrame: number): void {
-    const speedFactor = Math.min(this.getSpeed(), 100) / 100;
+    const speedFactor = Math.min(Math.abs(this.getSpeed()), 100) / 100;
 
     if (speedFactor <= 0) {
       this.visual.position.set(0, 0, 0);

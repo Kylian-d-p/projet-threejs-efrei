@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { Game } from "./Game";
+import "./hud.css";
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);

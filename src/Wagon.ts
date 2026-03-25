@@ -5,46 +5,21 @@ export class Wagon extends TrainElement {
   static readonly length: number = 5;
   static readonly WagonOffset: number = -2;
 
-  private attachedTo: TrainElement | null = null;
-  private readonly deceleration: number = 5;
+  private readonly attachedTo: TrainElement;
 
-  constructor(settings: { attachedTo?: { trainElement: TrainElement }; speed?: number; deceleration?: number; object: Group<Object3DEventMap> }) {
+  constructor(settings: { attachedTo: { trainElement: TrainElement }; speed?: number; object: Group<Object3DEventMap> }) {
     super({ object: settings.object, speed: settings.speed, length: Wagon.length });
-    if (settings.attachedTo !== undefined) {
-      const trainElement = settings.attachedTo.trainElement;
-      if (trainElement) {
-        this.attachTo(trainElement);
-      }
-    }
-    if (settings.deceleration !== undefined) {
-      this.deceleration = settings.deceleration;
-    }
-  }
-
-  public attachTo(trainElement: TrainElement): void {
-    this.attachedTo = trainElement;
-    this.snapBehind(trainElement);
-  }
-
-  public detach(): void {
-    this.speed = this.getSpeed();
-    this.attachedTo = null;
+    this.attachedTo = settings.attachedTo.trainElement;
+    this.snapBehind(this.attachedTo);
   }
 
   public getSpeed(): number {
-    return this.attachedTo ? this.attachedTo.getSpeed() : this.speed;
+    return this.attachedTo.getSpeed();
   }
 
   public loop(timeElapsedSinceLastFrame: number): void {
-    if (this.attachedTo) {
-      this.speed = this.attachedTo.getSpeed();
-      this.snapBehind(this.attachedTo);
-      this.applyShake(timeElapsedSinceLastFrame);
-      return;
-    }
-
-    this.speed = Math.max(0, this.speed - this.deceleration * timeElapsedSinceLastFrame);
-    this.object.translateZ(this.speed * timeElapsedSinceLastFrame);
+    this.speed = this.attachedTo.getSpeed();
+    this.snapBehind(this.attachedTo);
     this.applyShake(timeElapsedSinceLastFrame);
   }
 

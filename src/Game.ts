@@ -1,6 +1,7 @@
 import { AmbientLight, Color, DirectionalLight, Fog, HemisphereLight, Object3D, PerspectiveCamera, Scene, Vector3 } from "three";
 import { GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { Clouds } from "./Clouds";
+import { HudManager, TrainHudSnapshot } from "./HudManager";
 import { Loader } from "./Loader";
 import { Locomotive } from "./Locomotive";
 import { NatureDecor } from "./NatureDecor";
@@ -14,6 +15,7 @@ export class Game {
   private readonly sunlightOffset = new Vector3(24, 34, -6);
   private trainLocomotive: Locomotive;
   private wagons: Wagon[];
+  private hudManager: HudManager;
   private clouds: Clouds;
   private terrain: Terrain;
   private rail: Rail;
@@ -91,23 +93,28 @@ export class Game {
     this.scene.add(this.sunTarget);
     this.scene.add(this.sunLight);
 
+    this.hudManager = new HudManager((desiredSpeed) => {
+      this.trainLocomotive.setDesiredSpeed(desiredSpeed);
+    });
+
     this.updateSunlight();
     this.updateCamera();
+    this.hudManager.update(this.buildHudSnapshot());
   }
 
   public static async create(): Promise<Game> {
     const loader = new Loader();
     const [trainLocomotiveModel, trainWagonModel, railModel, treeModel, pineModel, bushModel, rockModel, grassModel] =
       await Promise.all([
-      loader.loadGLTF("../assets/train/train-locomotive-c.glb"),
-      loader.loadGLTF("../assets/train/train-carriage-flatbed.glb"),
-      loader.loadGLTF("../assets/train/railroad-straight.glb"),
-      loader.loadGLTF("../assets/nature/tree_default.glb"),
-      loader.loadGLTF("../assets/nature/tree_pineRoundA.glb"),
-      loader.loadGLTF("../assets/nature/plant_bushLarge.glb"),
-      loader.loadGLTF("../assets/nature/rock_largeA.glb"),
-      loader.loadGLTF("../assets/nature/grass_large.glb"),
-    ]);
+        loader.loadGLTF("../assets/train/train-locomotive-c.glb"),
+        loader.loadGLTF("../assets/train/train-carriage-flatbed.glb"),
+        loader.loadGLTF("../assets/train/railroad-straight.glb"),
+        loader.loadGLTF("../assets/nature/tree_default.glb"),
+        loader.loadGLTF("../assets/nature/tree_pineRoundA.glb"),
+        loader.loadGLTF("../assets/nature/plant_bushLarge.glb"),
+        loader.loadGLTF("../assets/nature/rock_largeA.glb"),
+        loader.loadGLTF("../assets/nature/grass_large.glb"),
+      ]);
 
     return new Game(trainLocomotiveModel, trainWagonModel, railModel, treeModel, pineModel, bushModel, rockModel, grassModel);
   }
@@ -135,6 +142,7 @@ export class Game {
 
     this.updateSunlight();
     this.updateCamera();
+    this.hudManager.update(this.buildHudSnapshot());
   }
 
   private updateCamera(): void {
@@ -153,5 +161,25 @@ export class Game {
     this.sunTarget.position.copy(locomotivePosition);
     this.sunTarget.updateMatrixWorld();
     this.sunLight.updateMatrixWorld();
+  }
+
+  private buildHudSnapshot(): TrainHudSnapshot {
+    const locomotiveObject = this.trainLocomotive.getObject();
+    const lastElement = this.wagons.length > 0 ? this.wagons[this.wagons.length - 1] : this.trainLocomotive;
+    const convoyLength =
+      this.wagons.length > 0
+        ? locomotiveObject.position.distanceTo(lastElement.getObject().position) + this.trainLocomotive.getLength() / 2 + lastElement.getLength() / 2
+        : this.trainLocomotive.getLength();
+
+    return {
+      speed: this.trainLocomotive.getSpeed(),
+      desiredSpeed: this.trainLocomotive.getDesiredSpeed(),
+      minSpeed: this.trainLocomotive.getMinSpeed(),
+      maxSpeed: this.trainLocomotive.getMaxSpeed(),
+      acceleration: this.trainLocomotive.getAcceleration(),
+      traveledDistance: this.trainLocomotive.getTraveledDistance(),
+      wagonCount: this.wagons.length,
+      convoyLength,
+    };
   }
 }
