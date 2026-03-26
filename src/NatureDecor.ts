@@ -70,7 +70,7 @@ export class NatureDecor {
       const variant = this.weightedVariants[Math.floor(random() * this.weightedVariants.length)];
       const item = this.createNormalizedInstance(variant.model.scene);
       const side = random() > 0.5 ? 1 : -1;
-      const distanceFromTrack = 10 + random() * 70;
+      const distanceFromTrack = 18 + random() * 62;
       const localZ = -this.chunkLength / 2 + random() * this.chunkLength;
       const rotationY = random() * Math.PI * 2;
       const scale = MathUtils.lerp(variant.scaleMin, variant.scaleMax, random());

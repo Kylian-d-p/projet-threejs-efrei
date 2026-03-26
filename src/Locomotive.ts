@@ -64,7 +64,7 @@ export class Locomotive extends TrainElement {
       this.speed -= Math.min(this.acceleration * timeElapsedSinceLastFrame, this.speed - this.desiredSpeed);
     }
 
-    const traveledDistance = this.speed * timeElapsedSinceLastFrame;
+    const traveledDistance = (this.speed / 3.6) * timeElapsedSinceLastFrame;
     this.object.translateZ(traveledDistance);
     this.traveledDistance += traveledDistance;
     this.applyShake(timeElapsedSinceLastFrame);

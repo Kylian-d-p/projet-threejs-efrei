@@ -6,6 +6,7 @@ import { Loader } from "./Loader";
 import { Locomotive } from "./Locomotive";
 import { NatureDecor } from "./NatureDecor";
 import { Rail } from "./Rail";
+import { RouteProgressSnapshot, RouteProgression } from "./RouteProgression";
 import { Terrain } from "./Terrain";
 import { Wagon } from "./Wagon";
 
@@ -19,6 +20,8 @@ export class Game {
   private clouds: Clouds;
   private terrain: Terrain;
   private rail: Rail;
+  private routeProgression: RouteProgression;
+  private routeSnapshot: RouteProgressSnapshot;
   private natureDecor: NatureDecor;
   private sunTarget = new Object3D();
   private sunLight: DirectionalLight;
@@ -44,7 +47,8 @@ export class Game {
     });
     this.clouds = new Clouds();
     this.terrain = new Terrain({ tileSize: 50 });
-    this.rail = new Rail(railModel);
+    this.rail = new Rail(railModel, { visibleLength: 420 });
+    this.routeProgression = new RouteProgression();
     this.natureDecor = new NatureDecor([
       { model: treeModel, scaleMin: 3.8, scaleMax: 5.8, weight: 3 },
       { model: pineModel, scaleMin: 4.2, scaleMax: 6.5, weight: 3 },
@@ -66,6 +70,7 @@ export class Game {
     this.scene.add(this.clouds.getObject());
     this.scene.add(this.terrain.getObject());
     this.scene.add(this.rail.getObject());
+    this.scene.add(this.routeProgression.getObject());
     this.scene.add(this.natureDecor.getObject());
     this.scene.add(this.trainLocomotive.getObject());
     for (const wagon of this.wagons) {
@@ -93,6 +98,7 @@ export class Game {
     this.scene.add(this.sunTarget);
     this.scene.add(this.sunLight);
 
+    this.routeSnapshot = this.routeProgression.update(0, this.trainLocomotive.getTraveledDistance(), Math.abs(this.trainLocomotive.getSpeed()));
     this.hudManager = new HudManager((desiredSpeed) => {
       this.trainLocomotive.setDesiredSpeed(desiredSpeed);
     });
@@ -106,8 +112,8 @@ export class Game {
     const loader = new Loader();
     const [trainLocomotiveModel, trainWagonModel, railModel, treeModel, pineModel, bushModel, rockModel, grassModel] =
       await Promise.all([
-        loader.loadGLTF("../assets/train/train-locomotive-c.glb"),
-        loader.loadGLTF("../assets/train/train-carriage-flatbed.glb"),
+        loader.loadGLTF("../assets/train/train-electric-subway-a.glb"),
+        loader.loadGLTF("../assets/train/train-electric-subway-b.glb"),
         loader.loadGLTF("../assets/train/railroad-straight.glb"),
         loader.loadGLTF("../assets/nature/tree_default.glb"),
         loader.loadGLTF("../assets/nature/tree_pineRoundA.glb"),
@@ -128,7 +134,21 @@ export class Game {
   }
 
   public loop(timeElapsedSinceLastFrame: number): void {
-    this.trainLocomotive.loop(timeElapsedSinceLastFrame);
+    if (!this.routeProgression.isGameEnded()) {
+      this.trainLocomotive.loop(timeElapsedSinceLastFrame);
+    }
+
+    this.routeSnapshot = this.routeProgression.update(
+      timeElapsedSinceLastFrame,
+      this.trainLocomotive.getTraveledDistance(),
+      Math.abs(this.trainLocomotive.getSpeed()),
+    );
+
+    if (this.routeSnapshot.gameEnded) {
+      this.trainLocomotive.setDesiredSpeed(0);
+      this.trainLocomotive.setSpeed(0);
+    }
+
     const trainPositionZ = this.trainLocomotive.getObject().position.z;
 
     this.clouds.loop(trainPositionZ);
@@ -180,6 +200,7 @@ export class Game {
       traveledDistance: this.trainLocomotive.getTraveledDistance(),
       wagonCount: this.wagons.length,
       convoyLength,
+      route: this.routeSnapshot,
     };
   }
 }
