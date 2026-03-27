@@ -11,16 +11,20 @@ type NatureVariant = {
 export class NatureDecor {
   private readonly object = new Group();
   private readonly chunks: Group[] = [];
-  private readonly variants: NatureVariant[];
+  private readonly normalizedTemplates = new Map<Group, Object3D>();
   private readonly weightedVariants: NatureVariant[];
   private readonly chunkLength: number;
   private readonly halfChunkCount: number;
   private traveledDistance = 0;
+  private lastVisibleRow: number | null = null;
 
   constructor(variants: NatureVariant[], settings?: { chunkLength?: number; chunkCount?: number }) {
-    this.variants = variants;
     this.weightedVariants = this.createWeightedVariants(variants);
     this.chunkLength = settings?.chunkLength ?? 30;
+
+    for (const variant of variants) {
+      this.normalizedTemplates.set(variant.model.scene, this.createNormalizedTemplate(variant.model.scene));
+    }
 
     const chunkCount = settings?.chunkCount ?? 24;
     this.halfChunkCount = Math.floor(chunkCount / 2);
@@ -46,6 +50,12 @@ export class NatureDecor {
   private updateChunks(anchorZ: number = this.traveledDistance, forceRefresh = false): void {
     const currentRow = Math.floor(anchorZ / this.chunkLength);
 
+    if (!forceRefresh && this.lastVisibleRow === currentRow) {
+      return;
+    }
+
+    this.lastVisibleRow = currentRow;
+
     for (let index = 0; index < this.chunks.length; index += 1) {
       const logicalRow = currentRow + index - this.halfChunkCount;
       const chunk = this.chunks[index];
@@ -64,7 +74,7 @@ export class NatureDecor {
     chunk.clear();
 
     const random = this.createRandom(logicalRow + 1);
-    const itemCount = 8 + Math.floor(random() * 8);
+    const itemCount = 5 + Math.floor(random() * 5);
 
     for (let itemIndex = 0; itemIndex < itemCount; itemIndex += 1) {
       const variant = this.weightedVariants[Math.floor(random() * this.weightedVariants.length)];
@@ -83,6 +93,12 @@ export class NatureDecor {
   }
 
   private createNormalizedInstance(source: Group): Object3D {
+    const template = this.normalizedTemplates.get(source);
+
+    return (template ?? this.createNormalizedTemplate(source)).clone();
+  }
+
+  private createNormalizedTemplate(source: Group): Object3D {
     const item = source.clone();
     item.updateMatrixWorld(true);
     item.traverse((child) => {

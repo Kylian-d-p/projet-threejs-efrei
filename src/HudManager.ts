@@ -212,21 +212,35 @@ export class HudManager {
     this.setValue("maxSpeed", `${this.formatNumber(snapshot.maxSpeed, 0)} km/h`);
     this.setValue("acceleration", `${this.formatNumber(snapshot.acceleration, 1)} km/h/s`);
 
-    this.speedCommandSlider.min = `${Math.min(snapshot.minSpeed, snapshot.maxSpeed)}`;
-    this.speedCommandSlider.max = `${Math.max(1, Math.round(snapshot.maxSpeed))}`;
-    this.speedCommandSlider.value = `${Math.max(Number(this.speedCommandSlider.min), Math.min(snapshot.desiredSpeed, Number(this.speedCommandSlider.max)))}`;
-    this.speedCommandValue.textContent = `${this.formatNumber(snapshot.desiredSpeed, 0)} km/h`;
+    const sliderMin = `${Math.min(snapshot.minSpeed, snapshot.maxSpeed)}`;
+    const sliderMax = `${Math.max(1, Math.round(snapshot.maxSpeed))}`;
+    const sliderValue = `${Math.max(Number(sliderMin), Math.min(snapshot.desiredSpeed, Number(sliderMax)))}`;
+
+    if (this.speedCommandSlider.min !== sliderMin) {
+      this.speedCommandSlider.min = sliderMin;
+    }
+    if (this.speedCommandSlider.max !== sliderMax) {
+      this.speedCommandSlider.max = sliderMax;
+    }
+    if (this.speedCommandSlider.value !== sliderValue) {
+      this.speedCommandSlider.value = sliderValue;
+    }
+    this.setTextIfChanged(this.speedCommandValue, `${this.formatNumber(snapshot.desiredSpeed, 0)} km/h`);
 
     this.updateIndicator(this.signalIndicator, snapshot.route.nextSignal);
     this.updateIndicator(this.stationIndicator, snapshot.route.nextStation);
-    this.objectiveValue.textContent = snapshot.route.objective;
-    this.messageValue.textContent = snapshot.route.message;
-    this.routeValues.stations.textContent = `${snapshot.route.validatedStations} / ${snapshot.route.totalStations}`;
-    this.routeValues.signals.textContent = `${snapshot.route.clearedSignals} / ${snapshot.route.totalSignals}`;
+    this.setTextIfChanged(this.objectiveValue, snapshot.route.objective);
+    this.setTextIfChanged(this.messageValue, snapshot.route.message);
+    this.setTextIfChanged(this.routeValues.stations, `${snapshot.route.validatedStations} / ${snapshot.route.totalStations}`);
+    this.setTextIfChanged(this.routeValues.signals, `${snapshot.route.clearedSignals} / ${snapshot.route.totalSignals}`);
 
-    this.speedCommandSlider.disabled = snapshot.route.gameEnded;
+    if (this.speedCommandSlider.disabled !== snapshot.route.gameEnded) {
+      this.speedCommandSlider.disabled = snapshot.route.gameEnded;
+    }
     for (const button of this.commandButtons) {
-      button.disabled = snapshot.route.gameEnded;
+      if (button.disabled !== snapshot.route.gameEnded) {
+        button.disabled = snapshot.route.gameEnded;
+      }
     }
 
     this.updateFinishOverlay(snapshot.route.finalSummary, snapshot.route.gameEnded);
@@ -237,10 +251,12 @@ export class HudManager {
   }
 
   private updateIndicator(indicator: IndicatorElements, snapshot: RouteIndicatorSnapshot): void {
-    indicator.card.dataset.tone = snapshot.tone;
-    indicator.label.textContent = snapshot.label;
-    indicator.distance.textContent = snapshot.distance === null ? "OK" : `${this.formatNumber(snapshot.distance, 0)} m`;
-    indicator.detail.textContent = snapshot.detail;
+    if (indicator.card.dataset.tone !== snapshot.tone) {
+      indicator.card.dataset.tone = snapshot.tone;
+    }
+    this.setTextIfChanged(indicator.label, snapshot.label);
+    this.setTextIfChanged(indicator.distance, snapshot.distance === null ? "OK" : `${this.formatNumber(snapshot.distance, 0)} m`);
+    this.setTextIfChanged(indicator.detail, snapshot.detail);
   }
 
   private updateFinishOverlay(summary: RouteFinalSummary | null, isVisible: boolean): void {
@@ -250,18 +266,24 @@ export class HudManager {
       return;
     }
 
-    this.finishTitle.textContent = "Terminus atteint";
-    this.finishSubtitle.textContent = `Mention: ${summary.rating}`;
-    this.finishValues.stations.textContent = `${summary.validatedStations} / ${summary.totalStations}`;
-    this.finishValues.missedStations.textContent = `${summary.missedStations}`;
-    this.finishValues.signals.textContent = `${summary.clearedSignals} / ${summary.totalSignals}`;
-    this.finishValues.violations.textContent = `${summary.violatedSignals}`;
-    this.finishValues.distance.textContent = `${this.formatNumber(summary.distanceTraveled, 0)} m`;
-    this.finishValues.duration.textContent = this.formatDuration(summary.totalTime);
+    this.setTextIfChanged(this.finishTitle, "Terminus atteint");
+    this.setTextIfChanged(this.finishSubtitle, `Mention: ${summary.rating}`);
+    this.setTextIfChanged(this.finishValues.stations, `${summary.validatedStations} / ${summary.totalStations}`);
+    this.setTextIfChanged(this.finishValues.missedStations, `${summary.missedStations}`);
+    this.setTextIfChanged(this.finishValues.signals, `${summary.clearedSignals} / ${summary.totalSignals}`);
+    this.setTextIfChanged(this.finishValues.violations, `${summary.violatedSignals}`);
+    this.setTextIfChanged(this.finishValues.distance, `${this.formatNumber(summary.distanceTraveled, 0)} m`);
+    this.setTextIfChanged(this.finishValues.duration, this.formatDuration(summary.totalTime));
   }
 
   private setValue(key: string, value: string): void {
-    this.statValues[key].textContent = value;
+    this.setTextIfChanged(this.statValues[key], value);
+  }
+
+  private setTextIfChanged(element: Node & { textContent: string | null }, value: string): void {
+    if (element.textContent !== value) {
+      element.textContent = value;
+    }
   }
 
   private createSummaryStat(container: HTMLElement, label: string, initialValue: string): HTMLSpanElement {

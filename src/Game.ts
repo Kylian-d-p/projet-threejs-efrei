@@ -11,11 +11,17 @@ import { Terrain } from "./Terrain";
 import { Wagon } from "./Wagon";
 
 export class Game {
-  private readonly cameraOffset = new Vector3(0, 5, -14);
-  private readonly cameraLookAhead = new Vector3(0, 2, 18);
+  private static readonly wagonCount = 8;
+  private readonly cameraTargetLocalOffset = new Vector3(0, 2.2, 0);
+  private readonly cameraOrbitOffset = new Vector3();
+  private readonly cameraTarget = new Vector3();
   private readonly sunlightOffset = new Vector3(24, 34, -6);
+  private readonly minCameraDistance = 6;
+  private readonly maxCameraDistance = 30;
+  private readonly minCameraPitch = 0.15;
+  private readonly maxCameraPitch = 1.2;
   private trainLocomotive: Locomotive;
-  private wagons: Wagon[];
+  private wagons: Wagon[] = [];
   private hudManager: HudManager;
   private clouds: Clouds;
   private terrain: Terrain;
@@ -27,6 +33,9 @@ export class Game {
   private sunLight: DirectionalLight;
   private scene: Scene = new Scene();
   private camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  private cameraDistance = Math.hypot(14, 5);
+  private cameraYaw = 0;
+  private cameraPitch = Math.atan2(5, 14);
 
   constructor(
     trainLocomotiveModel: GLTF,
@@ -45,27 +54,23 @@ export class Game {
       speed: 30,
       object: trainLocomotiveModel.scene.clone(),
     });
-    this.clouds = new Clouds();
+    this.clouds = new Clouds({ chunkCount: 8 });
     this.terrain = new Terrain({ tileSize: 50 });
     this.rail = new Rail(railModel, { visibleLength: 420 });
     this.routeProgression = new RouteProgression();
-    this.natureDecor = new NatureDecor([
-      { model: treeModel, scaleMin: 3.8, scaleMax: 5.8, weight: 3 },
-      { model: pineModel, scaleMin: 4.2, scaleMax: 6.5, weight: 3 },
-      { model: bushModel, scaleMin: 2.2, scaleMax: 3.8, weight: 4 },
-      { model: rockModel, scaleMin: 2.4, scaleMax: 4.5, weight: 3 },
-      { model: grassModel, scaleMin: 2.8, scaleMax: 4.8, weight: 6 },
-    ], { chunkLength: 26, chunkCount: 28 });
-    this.wagons = [];
-    this.wagons.push(
-      new Wagon({ attachedTo: { trainElement: this.trainLocomotive }, speed: 0, object: trainWagonModel.scene.clone() }),
+    this.natureDecor = new NatureDecor(
+      [
+        { model: treeModel, scaleMin: 3.8, scaleMax: 5.8, weight: 3 },
+        { model: pineModel, scaleMin: 4.2, scaleMax: 6.5, weight: 3 },
+        { model: bushModel, scaleMin: 2.2, scaleMax: 3.8, weight: 4 },
+        { model: rockModel, scaleMin: 2.4, scaleMax: 4.5, weight: 3 },
+        { model: grassModel, scaleMin: 2.8, scaleMax: 4.8, weight: 6 },
+      ],
+      { chunkLength: 28, chunkCount: 18 },
     );
-    this.wagons.push(
-      new Wagon({ attachedTo: { trainElement: this.wagons[0] }, speed: 0, object: trainWagonModel.scene.clone() }),
-    );
-    this.wagons.push(
-      new Wagon({ attachedTo: { trainElement: this.wagons[1] }, speed: 0, object: trainWagonModel.scene.clone() }),
-    );
+    for (let i = 0; i < Game.wagonCount; i++) {
+      this.wagons.push(new Wagon({ attachedTo: { trainElement: this.wagons[i - 1] || this.trainLocomotive }, speed: 0, object: trainWagonModel.scene.clone() }));
+    }
 
     this.scene.add(this.clouds.getObject());
     this.scene.add(this.terrain.getObject());
@@ -83,17 +88,6 @@ export class Game {
     this.scene.add(hemisphereLight);
 
     this.sunLight = new DirectionalLight(0xffd38a, 2.8);
-    this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 4096;
-    this.sunLight.shadow.mapSize.height = 4096;
-    this.sunLight.shadow.bias = -0.00015;
-    this.sunLight.shadow.normalBias = 0.02;
-    this.sunLight.shadow.camera.near = 1;
-    this.sunLight.shadow.camera.far = 280;
-    this.sunLight.shadow.camera.left = -160;
-    this.sunLight.shadow.camera.right = 160;
-    this.sunLight.shadow.camera.top = 160;
-    this.sunLight.shadow.camera.bottom = -160;
     this.sunLight.target = this.sunTarget;
     this.scene.add(this.sunTarget);
     this.scene.add(this.sunLight);
@@ -110,17 +104,16 @@ export class Game {
 
   public static async create(): Promise<Game> {
     const loader = new Loader();
-    const [trainLocomotiveModel, trainWagonModel, railModel, treeModel, pineModel, bushModel, rockModel, grassModel] =
-      await Promise.all([
-        loader.loadGLTF("../assets/train/train-electric-subway-a.glb"),
-        loader.loadGLTF("../assets/train/train-electric-subway-b.glb"),
-        loader.loadGLTF("../assets/train/railroad-straight.glb"),
-        loader.loadGLTF("../assets/nature/tree_default.glb"),
-        loader.loadGLTF("../assets/nature/tree_pineRoundA.glb"),
-        loader.loadGLTF("../assets/nature/plant_bushLarge.glb"),
-        loader.loadGLTF("../assets/nature/rock_largeA.glb"),
-        loader.loadGLTF("../assets/nature/grass_large.glb"),
-      ]);
+    const [trainLocomotiveModel, trainWagonModel, railModel, treeModel, pineModel, bushModel, rockModel, grassModel] = await Promise.all([
+      loader.loadGLTF("../assets/train/train-electric-subway-a.glb"),
+      loader.loadGLTF("../assets/train/train-electric-subway-b.glb"),
+      loader.loadGLTF("../assets/train/railroad-straight.glb"),
+      loader.loadGLTF("../assets/nature/tree_default.glb"),
+      loader.loadGLTF("../assets/nature/tree_pineRoundA.glb"),
+      loader.loadGLTF("../assets/nature/plant_bushLarge.glb"),
+      loader.loadGLTF("../assets/nature/rock_largeA.glb"),
+      loader.loadGLTF("../assets/nature/grass_large.glb"),
+    ]);
 
     return new Game(trainLocomotiveModel, trainWagonModel, railModel, treeModel, pineModel, bushModel, rockModel, grassModel);
   }
@@ -131,6 +124,23 @@ export class Game {
 
   public getCamera() {
     return this.camera;
+  }
+
+  public rotateCamera(deltaX: number, deltaY: number): void {
+    this.cameraYaw -= deltaX * 0.005;
+    this.cameraPitch = Math.max(this.minCameraPitch, Math.min(this.maxCameraPitch, this.cameraPitch - deltaY * 0.0035));
+  }
+
+  public zoomCamera(delta: number): void {
+    this.cameraDistance = Math.max(
+      this.minCameraDistance,
+      Math.min(this.maxCameraDistance, this.cameraDistance * Math.exp(delta * 0.0012)),
+    );
+  }
+
+  public setViewportSize(width: number, height: number): void {
+    this.camera.aspect = width / Math.max(height, 1);
+    this.camera.updateProjectionMatrix();
   }
 
   public loop(timeElapsedSinceLastFrame: number): void {
@@ -167,11 +177,18 @@ export class Game {
 
   private updateCamera(): void {
     const locomotiveObject = this.trainLocomotive.getObject();
-    const cameraOffset = this.cameraOffset.clone().applyQuaternion(locomotiveObject.quaternion);
-    const cameraLookTarget = this.cameraLookAhead.clone().applyQuaternion(locomotiveObject.quaternion);
+    this.cameraTarget.copy(this.cameraTargetLocalOffset).applyQuaternion(locomotiveObject.quaternion).add(locomotiveObject.position);
+    this.cameraOrbitOffset
+      .set(
+        Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
+        Math.sin(this.cameraPitch),
+        -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
+      )
+      .multiplyScalar(this.cameraDistance)
+      .applyQuaternion(locomotiveObject.quaternion);
 
-    this.camera.position.copy(locomotiveObject.position).add(cameraOffset);
-    this.camera.lookAt(locomotiveObject.position.clone().add(cameraLookTarget));
+    this.camera.position.copy(this.cameraTarget).add(this.cameraOrbitOffset);
+    this.camera.lookAt(this.cameraTarget);
   }
 
   private updateSunlight(): void {

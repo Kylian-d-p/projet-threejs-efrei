@@ -7,6 +7,7 @@ export class Rail {
   private readonly segmentLength: number;
   private readonly shouldRotate: boolean;
   private traveledDistance: number = 0;
+  private lastAnchorSegment: number | null = null;
 
   constructor(model: GLTF, settings?: { visibleLength?: number; y?: number }) {
     const sampleBounds = this.getSegmentBounds(model.scene);
@@ -42,6 +43,12 @@ export class Rail {
 
   private updateSegments(anchorZ: number = this.traveledDistance): void {
     const anchorSegment = Math.floor(anchorZ / this.segmentLength);
+
+    if (this.lastAnchorSegment === anchorSegment) {
+      return;
+    }
+
+    this.lastAnchorSegment = anchorSegment;
 
     for (let index = 0; index < this.segments.length; index += 1) {
       const segment = this.segments[index];

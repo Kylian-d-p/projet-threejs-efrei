@@ -1,12 +1,4 @@
-import {
-  BoxGeometry,
-  CylinderGeometry,
-  Group,
-  Mesh,
-  MeshStandardMaterial,
-  PointLight,
-  SphereGeometry,
-} from "three";
+import { BoxGeometry, CylinderGeometry, Group, Mesh, MeshStandardMaterial, PointLight, SphereGeometry } from "three";
 
 export type RouteIndicatorTone = "neutral" | "info" | "danger" | "success";
 
@@ -71,7 +63,7 @@ interface SignalCheckpoint {
 }
 
 export class RouteProgression {
-  private static readonly stationDistances = [240, 520, 800];
+  private static readonly stationDistances = [50, 1300, 2550];
   private static readonly stationPlatformLength = 70;
   private static readonly stationDwellDuration = 2;
   private static readonly stationStopSpeed = 1.2;
@@ -90,7 +82,9 @@ export class RouteProgression {
 
   constructor() {
     this.stations = RouteProgression.stationDistances.map((distance, index) => this.createStationCheckpoint(index + 1, distance));
-    this.signals = this.buildSignalDistances(RouteProgression.stationDistances).map((distance, index) => this.createSignalCheckpoint(index + 1, distance));
+    this.signals = this.buildSignalDistances(RouteProgression.stationDistances).map((distance, index) =>
+      this.createSignalCheckpoint(index + 1, distance),
+    );
 
     for (const station of this.stations) {
       this.object.add(station.group);
@@ -218,7 +212,10 @@ export class RouteProgression {
       nextSignal,
       nextStation,
       objective: this.buildObjective(progressDistance, nextSignal, nextStation),
-      message: this.messageTimeRemaining > 0 ? this.message : `Gares ${validatedStations}/${this.stations.length} | Feux ${clearedSignals}/${this.signals.length}`,
+      message:
+        this.messageTimeRemaining > 0
+          ? this.message
+          : `Gares ${validatedStations}/${this.stations.length} | Feux ${clearedSignals}/${this.signals.length}`,
       validatedStations,
       totalStations: this.stations.length,
       clearedSignals,
@@ -229,7 +226,9 @@ export class RouteProgression {
   }
 
   private buildNextSignalIndicator(progressDistance: number): RouteIndicatorSnapshot {
-    const nextSignal = this.signals.find((signal) => signal.state === "pending" || (signal.state === "cleared" && progressDistance <= signal.distance + 3));
+    const nextSignal = this.signals.find(
+      (signal) => signal.state === "pending" || (signal.state === "cleared" && progressDistance <= signal.distance + 3),
+    );
 
     if (nextSignal === undefined) {
       return {
@@ -287,7 +286,9 @@ export class RouteProgression {
       return "Partie terminee.";
     }
 
-    const activeStation = this.stations.find((station) => station.state === "pending" && progressDistance >= station.start && progressDistance <= station.end);
+    const activeStation = this.stations.find(
+      (station) => station.state === "pending" && progressDistance >= station.start && progressDistance <= station.end,
+    );
     if (activeStation !== undefined) {
       return `Arret en gare: immobilisez le train dans ${activeStation.name}.`;
     }
@@ -344,7 +345,6 @@ export class RouteProgression {
   private buildSignalDistances(stationDistances: readonly number[]): number[] {
     const random = this.createRandom(20260326);
     const windows: Array<{ start: number; end: number; count: number }> = [
-      { start: 90, end: 170, count: 2 },
       { start: stationDistances[0] + 90, end: stationDistances[1] - 90, count: 2 },
       { start: stationDistances[1] + 90, end: stationDistances[2] - 90, count: 2 },
     ];
@@ -396,10 +396,7 @@ export class RouteProgression {
     pole.position.set(4.2, 2.8, 0);
     signalGroup.add(pole);
 
-    const head = this.createShadowedMesh(
-      new BoxGeometry(0.9, 1.8, 0.6),
-      new MeshStandardMaterial({ color: 0x22262d, roughness: 0.9 }),
-    );
+    const head = this.createShadowedMesh(new BoxGeometry(0.9, 1.8, 0.6), new MeshStandardMaterial({ color: 0x22262d, roughness: 0.9 }));
     head.position.set(4.2, 4.2, 0);
     signalGroup.add(head);
 
@@ -425,17 +422,11 @@ export class RouteProgression {
     greenLight.position.copy(greenLens.position);
     signalGroup.add(greenLight);
 
-    const stopMarker = this.createShadowedMesh(
-      new BoxGeometry(3.4, 0.05, 0.8),
-      new MeshStandardMaterial({ color: 0xf2f4f8, roughness: 0.8 }),
-    );
+    const stopMarker = this.createShadowedMesh(new BoxGeometry(3.4, 0.05, 0.8), new MeshStandardMaterial({ color: 0xf2f4f8, roughness: 0.8 }));
     stopMarker.position.set(0, 0.05, 4);
     signalGroup.add(stopMarker);
 
-    const warningStrip = this.createShadowedMesh(
-      new BoxGeometry(3.4, 0.04, 0.25),
-      new MeshStandardMaterial({ color: 0xd34a4a, roughness: 0.7 }),
-    );
+    const warningStrip = this.createShadowedMesh(new BoxGeometry(3.4, 0.04, 0.25), new MeshStandardMaterial({ color: 0xd34a4a, roughness: 0.7 }));
     warningStrip.position.set(0, 0.08, 4);
     signalGroup.add(warningStrip);
 
@@ -461,10 +452,7 @@ export class RouteProgression {
     const group = new Group();
     const platformX = 4.8;
 
-    const platform = this.createShadowedMesh(
-      new BoxGeometry(7.6, 0.9, platformLength),
-      new MeshStandardMaterial({ color: 0x9ea4aa, roughness: 1 }),
-    );
+    const platform = this.createShadowedMesh(new BoxGeometry(7.6, 0.9, platformLength), new MeshStandardMaterial({ color: 0x9ea4aa, roughness: 1 }));
     platform.position.set(platformX, 0.45, 0);
     group.add(platform);
 
@@ -490,32 +478,20 @@ export class RouteProgression {
     group.add(shelterBack);
 
     for (const localZ of [-3.4, 3.4]) {
-      const post = this.createShadowedMesh(
-        new BoxGeometry(0.18, 2.4, 0.18),
-        new MeshStandardMaterial({ color: 0x505963, roughness: 0.9 }),
-      );
+      const post = this.createShadowedMesh(new BoxGeometry(0.18, 2.4, 0.18), new MeshStandardMaterial({ color: 0x505963, roughness: 0.9 }));
       post.position.set(platformX - 1.7, 1.8, localZ);
       group.add(post);
 
-      const backPost = this.createShadowedMesh(
-        new BoxGeometry(0.18, 2.4, 0.18),
-        new MeshStandardMaterial({ color: 0x505963, roughness: 0.9 }),
-      );
+      const backPost = this.createShadowedMesh(new BoxGeometry(0.18, 2.4, 0.18), new MeshStandardMaterial({ color: 0x505963, roughness: 0.9 }));
       backPost.position.set(platformX + 3.3, 1.8, localZ);
       group.add(backPost);
     }
 
-    const benchSeat = this.createShadowedMesh(
-      new BoxGeometry(1.6, 0.12, 0.6),
-      new MeshStandardMaterial({ color: 0x6d4d34, roughness: 1 }),
-    );
+    const benchSeat = this.createShadowedMesh(new BoxGeometry(1.6, 0.12, 0.6), new MeshStandardMaterial({ color: 0x6d4d34, roughness: 1 }));
     benchSeat.position.set(platformX + 0.6, 1.1, 2.6);
     group.add(benchSeat);
 
-    const benchBase = this.createShadowedMesh(
-      new BoxGeometry(1.2, 0.5, 0.18),
-      new MeshStandardMaterial({ color: 0x474d54, roughness: 0.9 }),
-    );
+    const benchBase = this.createShadowedMesh(new BoxGeometry(1.2, 0.5, 0.18), new MeshStandardMaterial({ color: 0x474d54, roughness: 0.9 }));
     benchBase.position.set(platformX + 0.6, 0.82, 2.6);
     group.add(benchBase);
 
@@ -533,7 +509,7 @@ export class RouteProgression {
     signBoard.position.set(platformX + 2.9, 2.4, -11);
     group.add(signBoard);
 
-    for (const localZ of [-22, 0, 22]) {
+    for (const localZ of [-22, 22]) {
       group.add(this.createLampPost(platformX + 2.5, localZ));
     }
 
@@ -543,17 +519,11 @@ export class RouteProgression {
   private createLampPost(x: number, z: number): Group {
     const group = new Group();
 
-    const pole = this.createShadowedMesh(
-      new CylinderGeometry(0.08, 0.08, 4.8, 10),
-      new MeshStandardMaterial({ color: 0x4b5058, roughness: 0.9 }),
-    );
+    const pole = this.createShadowedMesh(new CylinderGeometry(0.08, 0.08, 4.8, 10), new MeshStandardMaterial({ color: 0x4b5058, roughness: 0.9 }));
     pole.position.set(x, 2.4, z);
     group.add(pole);
 
-    const arm = this.createShadowedMesh(
-      new BoxGeometry(0.8, 0.08, 0.08),
-      new MeshStandardMaterial({ color: 0x4b5058, roughness: 0.9 }),
-    );
+    const arm = this.createShadowedMesh(new BoxGeometry(0.8, 0.08, 0.08), new MeshStandardMaterial({ color: 0x4b5058, roughness: 0.9 }));
     arm.position.set(x - 0.35, 4.55, z);
     group.add(arm);
 

@@ -1,4 +1,4 @@
-import { Group, Mesh, Object3DEventMap } from "three";
+import { Euler, Group, Mesh, Object3DEventMap, Vector3 } from "three";
 
 export abstract class TrainElement {
   protected speed: number = 0;
@@ -7,6 +7,9 @@ export abstract class TrainElement {
   protected readonly length: number;
   private shakeTime: number = 0;
   private readonly shakeAnimationOffset: number = Math.random() * 1000;
+  private readonly visualBasePosition: Vector3 = new Vector3();
+  private readonly visualBaseRotation: Euler = new Euler();
+  private currentShakeStrength: number = 0;
 
   constructor(settings: { object: Group<Object3DEventMap>; speed?: number; length: number }) {
     this.object = new Group<Object3DEventMap>();
@@ -43,23 +46,51 @@ export abstract class TrainElement {
     return this.length;
   }
 
-  protected applyShake(timeElapsedSinceLastFrame: number): void {
-    const speedFactor = Math.min(Math.abs(this.getSpeed()), 100) / 100;
+  protected setVisualBasePosition(x: number, y: number, z: number): void {
+    this.visualBasePosition.set(x, y, z);
+    this.visual.position.copy(this.visualBasePosition);
+  }
 
-    if (speedFactor <= 0) {
-      this.visual.position.set(0, 0, 0);
-      this.visual.rotation.set(0, 0, 0);
+  protected setVisualBaseRotation(x: number, y: number, z: number): void {
+    this.visualBaseRotation.set(x, y, z);
+    this.visual.rotation.copy(this.visualBaseRotation);
+  }
+
+  protected applyShake(timeElapsedSinceLastFrame: number): void {
+    const clampedDelta = Math.min(timeElapsedSinceLastFrame, 1 / 30);
+    const normalizedSpeed = Math.min(Math.abs(this.getSpeed()), 160) / 160;
+    const speedFactor = normalizedSpeed * normalizedSpeed * (3 - 2 * normalizedSpeed);
+    const targetShakeStrength = speedFactor * 1.2;
+    const blendFactor = 1 - Math.exp(-clampedDelta * 7);
+
+    this.currentShakeStrength += (targetShakeStrength - this.currentShakeStrength) * blendFactor;
+
+    if (this.currentShakeStrength <= 0.0001) {
+      this.currentShakeStrength = 0;
+      this.visual.position.copy(this.visualBasePosition);
+      this.visual.rotation.copy(this.visualBaseRotation);
       return;
     }
 
-    this.shakeTime += (timeElapsedSinceLastFrame + this.shakeAnimationOffset) * (5 + speedFactor * 20);
+    const phase = this.shakeTime + this.shakeAnimationOffset;
+    const lateralShake = (Math.sin(phase * 1.8) + Math.sin(phase * 0.95) * 0.35) * 0.012 * this.currentShakeStrength;
+    const verticalShake = (Math.sin(phase * 2.6) + Math.sin(phase * 1.35 + 0.8) * 0.25) * 0.009 * this.currentShakeStrength;
+    const longitudinalShake = Math.sin(phase * 1.2 + 1.3) * 0.004 * this.currentShakeStrength;
+    const pitchShake = Math.sin(phase * 1.55 + 0.25) * 0.0035 * this.currentShakeStrength;
+    const rollShake = (Math.sin(phase * 2.1) + Math.sin(phase * 0.9 + 1.1) * 0.25) * 0.005 * this.currentShakeStrength;
 
     this.visual.position.set(
-      Math.sin(this.shakeTime * 1.7) * 0.03 * speedFactor,
-      Math.sin(this.shakeTime * 2.9) * 0.015 * speedFactor,
-      Math.sin(this.shakeTime * 1.2) * 0.01 * speedFactor,
+      this.visualBasePosition.x + lateralShake,
+      this.visualBasePosition.y + verticalShake,
+      this.visualBasePosition.z + longitudinalShake,
     );
-    this.visual.rotation.set(Math.sin(this.shakeTime * 1.6) * 0.01 * speedFactor, 0, Math.sin(this.shakeTime * 2.3) * 0.012 * speedFactor);
+    this.visual.rotation.set(
+      this.visualBaseRotation.x + pitchShake,
+      this.visualBaseRotation.y,
+      this.visualBaseRotation.z + rollShake,
+    );
+
+    this.shakeTime += clampedDelta * (4 + speedFactor * 7);
   }
 
   public abstract loop(timeElapsedSinceLastFrame: number): void;

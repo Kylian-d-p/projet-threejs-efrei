@@ -10,6 +10,7 @@ export class Terrain {
   private readonly totalDepth: number;
   private readonly totalWidth: number;
   private traveledDistance: number = 0;
+  private lastAnchorRow: number | null = null;
 
   constructor(settings?: { tileSize?: number; rows?: number; columns?: number; y?: number }) {
     this.tileSize = settings?.tileSize ?? 20;
@@ -45,6 +46,12 @@ export class Terrain {
     const halfDepth = this.totalDepth / 2;
     const halfWidth = this.totalWidth / 2;
     const anchorRow = Math.floor(anchorZ / this.tileSize);
+
+    if (this.lastAnchorRow === anchorRow) {
+      return;
+    }
+
+    this.lastAnchorRow = anchorRow;
     let index = 0;
 
     for (let row = 0; row < this.rows; row += 1) {

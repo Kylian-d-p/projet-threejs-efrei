@@ -1,11 +1,18 @@
-import { Group, MathUtils, Mesh, MeshStandardMaterial, SphereGeometry } from "three";
+import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from "three";
 
 export class Clouds {
   private readonly object = new Group();
   private readonly chunks: Group[] = [];
   private readonly chunkLength: number;
   private readonly halfChunkCount: number;
+  private readonly puffGeometry = new SphereGeometry(1, 10, 10);
+  private readonly puffMaterial = new MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 1,
+    metalness: 0,
+  });
   private anchorZ = 0;
+  private lastVisibleRow: number | null = null;
 
   constructor(settings?: { chunkLength?: number; chunkCount?: number }) {
     this.chunkLength = settings?.chunkLength ?? 140;
@@ -35,6 +42,12 @@ export class Clouds {
 
   private updateChunks(anchorZ: number): void {
     const currentRow = Math.floor(anchorZ / this.chunkLength);
+
+    if (this.lastVisibleRow === currentRow) {
+      return;
+    }
+
+    this.lastVisibleRow = currentRow;
     const minVisibleRow = currentRow - this.halfChunkCount;
     const maxVisibleRow = currentRow + this.halfChunkCount;
 
@@ -70,27 +83,19 @@ export class Clouds {
 
       for (let puffIndex = 0; puffIndex < puffCount; puffIndex += 1) {
         const radius = 2.5 + random() * 3.5;
-        const geometry = new SphereGeometry(radius, 12, 12);
-        const material = new MeshStandardMaterial({
-          color: 0xffffff,
-          roughness: 1,
-          metalness: 0,
-        });
-        const puff = new Mesh(geometry, material);
-        puff.castShadow = true;
-        puff.receiveShadow = true;
+        const puff = new Mesh(this.puffGeometry, this.puffMaterial);
 
         puff.position.set(
           -cloudWidth / 2 + random() * cloudWidth,
           random() * 2.5,
           -3 + random() * 6,
         );
-        puff.scale.y = 0.65 + random() * 0.35;
+        puff.scale.set(radius, radius * (0.65 + random() * 0.35), radius);
         cloud.add(puff);
       }
 
       cloud.position.set(
-        MathUtils.randFloatSpread(120),
+        -60 + random() * 120,
         28 + random() * 14,
         -this.chunkLength / 2 + random() * this.chunkLength,
       );

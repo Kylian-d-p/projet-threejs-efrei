@@ -14,6 +14,7 @@ export class Locomotive extends TrainElement {
   constructor(settings: { speed?: number; acceleration?: number; minSpeed?: number; maxSpeed?: number; object: Group<Object3DEventMap> }) {
     super({ object: settings.object, speed: settings.speed, length: Locomotive.length });
     this.object.rotateY(Math.PI);
+    this.setVisualBasePosition(0.09, 0, 0);
     if (settings.acceleration !== undefined) {
       this.acceleration = settings.acceleration;
     }
