@@ -3,7 +3,7 @@ import { TrainElement } from "./TrainElement";
 
 export class Wagon extends TrainElement {
   static readonly length: number = 5;
-  static readonly WagonOffset: number = -2;
+  static readonly WagonOffset: number = -2.3;
 
   private readonly attachedTo: TrainElement;
   private readonly direction = new Vector3();
